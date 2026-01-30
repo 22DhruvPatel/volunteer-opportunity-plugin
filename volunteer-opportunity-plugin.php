@@ -8,4 +8,6 @@ Author: Dhruv Patel
 
 
 
+register_activation_hook(__FILE__, 'volunteer_activate');
+
 ?>
