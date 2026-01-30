@@ -6,12 +6,12 @@ Version: 1.0
 Author: Dhruv Patel
 */
 
-
+//activation hook
 function volunteer_activate() {
   global $wpdb;
 
   $wpdb->query("CREATE TABLE wp_volunteer (
-    id midiumint(9) NOT NULL AUTO_INCREMENT,
+    id mediumint(9) NOT NULL AUTO_INCREMENT,
     position tinytext NOT NULL,
     organization tinytext NOT NULL,
     type tinytext NOT NULL,
@@ -25,7 +25,7 @@ function volunteer_activate() {
 }
 register_activation_hook(__FILE__, 'volunteer_activate');
 
-
+//deactivation hook
 function volunteer_deactivate() {
   global $wpdb;
   $wpdb->query("DROP TABLE wp_volunteer");
@@ -33,6 +33,16 @@ function volunteer_deactivate() {
 register_deactivation_hook(__FILE__, 'volunteer_deactivate');
 
 
-
+//admin menu page
+function volunteer_admin_menu() {
+  add_menu_page (
+    'Volunteer Opportunities',
+    'Volunteer',
+    'manage_options',
+    'volunteer_ops',
+    'volunteer_ops_page_html'
+  )
+}
+add_action('admin_menu', 'vlunteer_admin_menu');
 
 ?>
