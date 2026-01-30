@@ -175,4 +175,11 @@ function volunteer_ops_page_html() {
  
 
 
+function volunteer_shortcode_func($atts=[], $content=null) {
+  global = $wpdb;
+  $table_name = $wpdb->prefix . 'volunteer';
+
+}
+
+
 ?>
