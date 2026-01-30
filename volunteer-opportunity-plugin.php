@@ -10,7 +10,7 @@ Author: Dhruv Patel
 function volunteer_activate() {
   global $wpdb;
 
-  $wpdb->query("CREATE TABLE Volunteer_ops (
+  $wpdb->query("CREATE TABLE wp_volunteer (
     id midiumint(9) NOT NULL AUTO_INCREMENT,
     position tinytext NOT NULL,
     organization tinytext NOT NULL,
@@ -23,10 +23,14 @@ function volunteer_activate() {
     PRIMARY KEY (id)
   );");
 }
-
 register_activation_hook(__FILE__, 'volunteer_activate');
 
 
+function volunteer_deactivate() {
+  global $wpdb;
+  $wpdb->query("DROP TABLE wp_volunteer");
+}
+register_deactivation_hook(__FILE__, 'volunteer_deactivate');
 
 
 
