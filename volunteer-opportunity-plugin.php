@@ -69,6 +69,7 @@ function volunteer_ops_page_html() {
       <label>Hours:</label><input type="text" name="hours"><br>
       <input type="submit" name="submit" value="Save" class="button button-primary">
     </form>
+    /**Database is giving some error at this point */
   </div>
   <?php>
 }
