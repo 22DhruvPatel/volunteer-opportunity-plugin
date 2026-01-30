@@ -48,18 +48,26 @@ add_action('admin_menu', 'volunteer_admin_menu');
 function volunteer_ops_page_html() {
   global $wpdb;
 
-  if(isset($_POST['submit'])) {
-    $table_name = 'wp_volunteer';
-
-    $wpdb->insert(
-      $table_name,
-      array(
-        'position' => $_POST['position'],
-        'hours' => $_POST['hours']
-      )
+  if (isset($_POST['submit'])) {
+    // Validation: Ensure hours is an integer
+    $hours = intval($_POST['hours']);
+        
+    // Sanitization for other fields
+    $data = array(
+      'position' => sanitize_text_field($_POST['position']),
+      'organization' => sanitize_text_field($_POST['organization']),
+      'type' => sanitize_text_field($_POST['type']),
+      'email' => sanitize_email($_POST['email']),
+      'description' => sanitize_textarea_field($_POST['description']),
+      'location' => sanitize_text_field($_POST['location']),
+      'hours' => $hours,
+      'skills' => sanitize_text_field($_POST['skills'])
     );
-    echo '<div class="updated"><p>Saved!</p></div/>';
+
+    $wpdb->insert($table_name, $data);
+    $message = "Opportunity Saved Successfully!";
   }
+
 
   ?>
   <div class="wrap">
