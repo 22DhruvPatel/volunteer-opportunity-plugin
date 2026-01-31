@@ -175,11 +175,97 @@ function volunteer_ops_page_html() {
  
 
 
-function volunteer_shortcode_func($atts=[], $content=null) {
-  global = $wpdb;
+function volunteer_shortcode_func($atts = [], $content = null) {
+  global $wpdb;
   $table_name = $wpdb->prefix . 'volunteer';
 
-}
+  // Normalize attributes to lowercase
+  $atts = array_change_key_case((array)$atts, CASE_LOWER);
 
+  // Initialize logic variables
+  $use_colors = true; // Default: Colors are ON
+  $filter_clauses = [];
+
+  // Filter by Hours (Requirement: < supplied number)
+  if (isset($atts['hours'])) {
+    $hours_val = intval($atts['hours']);
+    $filter_clauses[] = "hours < $hours_val";
+    $use_colors = false; // Requirement: Coloring only occurs if NO parameters are used
+  }
+
+  // Filter by Type (Requirement: match supplied type)
+  if (isset($atts['type'])) {
+    $type_val = sanitize_text_field($atts['type']);
+    $filter_clauses[] = "type = '$type_val'";
+    $use_colors = false; // Requirement: Coloring only occurs if NO parameters are used
+  }
+
+  // Build SQL Query
+  $sql = "SELECT * FROM $table_name";
+  if (!empty($filter_clauses)) {
+    $sql .= " WHERE " . implode(' AND ', $filter_clauses);
+  }
+    
+  $results = $wpdb->get_results($sql);
+
+  // Output Buffer Start
+  ob_start();
+
+  // Inline CSS for the table styles
+  echo '<style>
+    .vol-table { width: 100%; border-collapse: collapse; margin-top: 15px; border: 1px solid #ddd; }
+    .vol-table th, .vol-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    .vol-table th { background-color: #f2f2f2; }
+    .vol-green { background-color: #90EE90; } /* Green: < 10 hours */
+    .vol-yellow { background-color: #FFFFE0; } /* Yellow: 10-100 hours */
+    .vol-red { background-color: #FF7F7F; }    /* Red: > 100 hours */
+    </style>';
+
+  echo '<table class="vol-table">';
+  echo '<thead><tr>
+    <th>Position</th>
+    <th>Organization</th>
+    <th>Type</th>
+    <th>Location</th>
+    <th>Hours</th>
+    <th>Contact</th>
+    <th>Skills</th>
+  </tr></thead><tbody>';
+
+  if ($results) {
+    foreach ($results as $row) {
+      $row_class = '';
+
+      // Apply Coloring Logic ONLY if no filters are active
+      if ($use_colors) {
+        if ($row->hours < 10) {
+          $row_class = 'vol-green';
+        } elseif ($row->hours >= 10 && $row->hours <= 100) {
+          $row_class = 'vol-yellow';
+        } elseif ($row->hours > 100) {
+          $row_class = 'vol-red';
+        }
+      }
+
+      echo '<tr class="' . $row_class . '">';
+      echo '<td>' . esc_html($row->position) . '</td>';
+      echo '<td>' . esc_html($row->organization) . '</td>';
+      echo '<td>' . esc_html($row->type) . '</td>';
+      echo '<td>' . esc_html($row->location) . '</td>';
+      echo '<td>' . esc_html($row->hours) . '</td>';
+      echo '<td><a href="mailto:' . esc_attr($row->email) . '">Email</a></td>';
+      echo '<td>' . esc_html($row->skills) . '</td>';
+      echo '</tr>';
+    }
+  } else {
+    echo '<tr><td colspan="7">No opportunities found matching your criteria.</td></tr>';
+  }
+
+  echo '</tbody></table>';
+
+  // Return the buffer content
+  return ob_get_clean();
+}
+add_shortcode('volunteer', 'volunteer_shortcode_func');
 
 ?>
