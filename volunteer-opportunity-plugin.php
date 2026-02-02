@@ -25,12 +25,22 @@ function volunteer_activate() {
 }
 register_activation_hook(__FILE__, 'volunteer_activate');
 
-//deactivation hook
 function volunteer_deactivate() {
+  global $wpdb;
+  $table_name = $wpdb->prefix . 'volunteer';
+  $sql = "TURNCATE TABLE $table_name";
+  $wpdb->query($sql);
+}
+register_deactivation_hook(__FILE__, 'volunteer_deactivate');
+
+
+
+//Drop table when uninstalled the plugin
+function volunteer_uninstall() {
   global $wpdb;
   $wpdb->query("DROP TABLE wp_volunteer");
 }
-register_deactivation_hook(__FILE__, 'volunteer_deactivate');
+register_deactivation_hook(__FILE__, 'volunteer_uninstall');
 
 
 //admin menu page
