@@ -6,11 +6,17 @@ Version: 1.0
 Author: Dhruv Patel
 */
 
-//activation hook
+
+
+// Activation hook: Creates the database table on plugin activation
 function volunteer_activate() {
   global $wpdb;
 
-  $wpdb->query("CREATE TABLE wp_volunteer (
+  // We use dbDelta to create the table, which is the standard WordPress way
+  $table_name = $wpdb->prefix . 'volunteer';
+  $charset_collate = $wpdb->get_charset_collate();
+
+  $sql = "CREATE TABLE $table_name (
     id mediumint(9) NOT NULL AUTO_INCREMENT,
     position tinytext NOT NULL,
     organization tinytext NOT NULL,
@@ -21,29 +27,35 @@ function volunteer_activate() {
     hours int(11) NOT NULL,
     skills text NOT NULL,
     PRIMARY KEY (id)
-  );");
+  ) $charset_collate;";
+
+  require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+  dbDelta($sql);
 }
 register_activation_hook(__FILE__, 'volunteer_activate');
 
+// Deactivation hook: Clears data but keeps the table structure
 function volunteer_deactivate() {
   global $wpdb;
   $table_name = $wpdb->prefix . 'volunteer';
-  $sql = "TURNCATE TABLE $table_name";
+  $sql = "TRUNCATE TABLE $table_name";
   $wpdb->query($sql);
 }
 register_deactivation_hook(__FILE__, 'volunteer_deactivate');
 
-
-
-//Drop table when uninstalled the plugin
+// Uninstall hook: Completely removes the table from the database
 function volunteer_uninstall() {
   global $wpdb;
-  $wpdb->query("DROP TABLE wp_volunteer");
+  $table_name = $wpdb->prefix . 'volunteer';
+  // Drop table when uninstalled the plugin
+  $wpdb->query("DROP TABLE IF EXISTS $table_name");
 }
-register_deactivation_hook(__FILE__, 'volunteer_uninstall');
+register_uninstall_hook(__FILE__, 'volunteer_uninstall');
 
 
-//admin menu page
+
+
+// Register the Admin Menu page
 function volunteer_admin_menu() {
   add_menu_page (
     'Volunteer Opportunities',
@@ -55,11 +67,18 @@ function volunteer_admin_menu() {
 }
 add_action('admin_menu', 'volunteer_admin_menu');
 
+// Main function to render the Admin Page (Handle CRUD operations)
 function volunteer_ops_page_html() {
+    // Security Check: Ensure user has permission to manage options
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+
     global $wpdb;
     $table_name = $wpdb->prefix . 'volunteer';
     $message = '';
 
+    // Initialize variables for the form (empty by default)
     $entry_id = 0;
     $position = '';
     $organization = '';
@@ -70,13 +89,16 @@ function volunteer_ops_page_html() {
     $hours = '';
     $skills = '';
 
+    //DELETE LOGIC
     if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
         $wpdb->delete($table_name, array('id' => intval($_GET['id'])));
         $message = "Opportunity Deleted.";
     }
 
+    //EDIT LOGIC (Pre-fill form)
     if (isset($_GET['action']) && $_GET['action'] == 'edit' && isset($_GET['id'])) {
         $entry_id = intval($_GET['id']);
+        // Fetch existing data to populate the input fields
         $result = $wpdb->get_row("SELECT * FROM $table_name WHERE id = $entry_id");
         if ($result) {
             $position = $result->position;
@@ -90,7 +112,9 @@ function volunteer_ops_page_html() {
         }
     }
 
+    //SAVE LOGIC (Insert or Update)
     if (isset($_POST['submit'])) {
+        // Sanitize and Validate inputs
         $hours = intval($_POST['hours']);
         
         $data = array(
@@ -104,13 +128,17 @@ function volunteer_ops_page_html() {
             'skills' => sanitize_text_field($_POST['skills'])
         );
 
+        // Check if we are Updating an existing entry or Creating a new one
         if (isset($_POST['entry_id']) && $_POST['entry_id'] != 0) {
+            // Update existing record
             $wpdb->update($table_name, $data, array('id' => intval($_POST['entry_id'])));
             $message = "Opportunity Updated Successfully!";
         } else {
+            // Insert new record
             $wpdb->insert($table_name, $data);
             $message = "Opportunity Saved Successfully!";
             
+            // Reset form variables after successful save
             $entry_id = 0; $position = ''; $organization = ''; $email = ''; 
             $description = ''; $location = ''; $hours = ''; $skills = '';
         }
@@ -216,7 +244,7 @@ function volunteer_ops_page_html() {
     </div>
     <?php
 }
- 
+
 
 
 function volunteer_shortcode_func($atts = [], $content = null) {
@@ -230,21 +258,21 @@ function volunteer_shortcode_func($atts = [], $content = null) {
   $use_colors = true; // Default: Colors are ON
   $filter_clauses = [];
 
-  // Filter by Hours (Requirement: < supplied number)
+  // Logic: Filter by Hours
   if (isset($atts['hours'])) {
     $hours_val = intval($atts['hours']);
     $filter_clauses[] = "hours < $hours_val";
-    $use_colors = false; // Requirement: Coloring only occurs if NO parameters are used
+    $use_colors = false; // Disable colors if filtering by hours
   }
 
-  // Filter by Type (Requirement: match supplied type)
+  // Logic: Filter by Type 
   if (isset($atts['type'])) {
     $type_val = sanitize_text_field($atts['type']);
     $filter_clauses[] = "type = '$type_val'";
-    $use_colors = false; // Requirement: Coloring only occurs if NO parameters are used
+    $use_colors = false; // Disable colors if filtering by type
   }
 
-  // Build SQL Query
+  // Build SQL Query dynamically
   $sql = "SELECT * FROM $table_name";
   if (!empty($filter_clauses)) {
     $sql .= " WHERE " . implode(' AND ', $filter_clauses);
@@ -252,7 +280,7 @@ function volunteer_shortcode_func($atts = [], $content = null) {
     
   $results = $wpdb->get_results($sql);
 
-  // Output Buffer Start
+  // Output Buffer Start (to return HTML string)
   ob_start();
 
   // Inline CSS for the table styles
