@@ -56,131 +56,165 @@ function volunteer_admin_menu() {
 add_action('admin_menu', 'volunteer_admin_menu');
 
 function volunteer_ops_page_html() {
-  global $wpdb;
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'volunteer';
+    $message = '';
 
-  global $wpdb;
-  $table_name = $wpdb->prefix . 'volunteer';
-  $message = '';
+    $entry_id = 0;
+    $position = '';
+    $organization = '';
+    $type = 'One-time';
+    $email = '';
+    $description = '';
+    $location = '';
+    $hours = '';
+    $skills = '';
 
-  //DELETE ACTION
-  if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
-    $wpdb->delete($table_name, array('id' => intval($_GET['id'])));
-    $message = "Opportunity Deleted.";
-  }
+    if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
+        $wpdb->delete($table_name, array('id' => intval($_GET['id'])));
+        $message = "Opportunity Deleted.";
+    }
 
-  if (isset($_POST['submit'])) {
-    // Validation: Ensure hours is an integer
-    $hours = intval($_POST['hours']);
+    if (isset($_GET['action']) && $_GET['action'] == 'edit' && isset($_GET['id'])) {
+        $entry_id = intval($_GET['id']);
+        $result = $wpdb->get_row("SELECT * FROM $table_name WHERE id = $entry_id");
+        if ($result) {
+            $position = $result->position;
+            $organization = $result->organization;
+            $type = $result->type;
+            $email = $result->email;
+            $description = $result->description;
+            $location = $result->location;
+            $hours = $result->hours;
+            $skills = $result->skills;
+        }
+    }
+
+    if (isset($_POST['submit'])) {
+        $hours = intval($_POST['hours']);
         
-    // Sanitization for other fields
-    $data = array(
-      'position' => sanitize_text_field($_POST['position']),
-      'organization' => sanitize_text_field($_POST['organization']),
-      'type' => sanitize_text_field($_POST['type']),
-      'email' => sanitize_email($_POST['email']),
-      'description' => sanitize_textarea_field($_POST['description']),
-      'location' => sanitize_text_field($_POST['location']),
-      'hours' => $hours,
-      'skills' => sanitize_text_field($_POST['skills'])
-    );
+        $data = array(
+            'position' => sanitize_text_field($_POST['position']),
+            'organization' => sanitize_text_field($_POST['organization']),
+            'type' => sanitize_text_field($_POST['type']),
+            'email' => sanitize_email($_POST['email']),
+            'description' => sanitize_textarea_field($_POST['description']),
+            'location' => sanitize_text_field($_POST['location']),
+            'hours' => $hours,
+            'skills' => sanitize_text_field($_POST['skills'])
+        );
 
-    $wpdb->insert($table_name, $data);
-    $message = "Opportunity Saved Successfully!";
-  }
+        if (isset($_POST['entry_id']) && $_POST['entry_id'] != 0) {
+            $wpdb->update($table_name, $data, array('id' => intval($_POST['entry_id'])));
+            $message = "Opportunity Updated Successfully!";
+        } else {
+            $wpdb->insert($table_name, $data);
+            $message = "Opportunity Saved Successfully!";
+            
+            $entry_id = 0; $position = ''; $organization = ''; $email = ''; 
+            $description = ''; $location = ''; $hours = ''; $skills = '';
+        }
+    }
 
+    ?>
+    <div class="wrap">
+        <h1>Volunteer Opportunities</h1>
+        <?php if ($message) echo "<div class='updated notice is-dismissible'><p>$message</p></div>"; ?>
 
-  ?>
-  <div class="wrap">
-    <h1>Volunteer Opportunities</h1>
-    <?php if ($message) echo "<div class='updated notice is-dismissible'><p>$message</p></div>"; ?>
+        <div style="background:#fff; padding:20px; border:1px solid #ccc; margin-bottom: 20px;">
+            <h2><?php echo ($entry_id != 0) ? 'Edit Opportunity' : 'Add New Opportunity'; ?></h2>
+            <form method="post">
+                <input type="hidden" name="entry_id" value="<?php echo esc_attr($entry_id); ?>">
+                <table class="form-table">
+                    <tr>
+                        <th><label>Position</label></th>
+                        <td><input type="text" name="position" class="regular-text" value="<?php echo esc_attr($position); ?>" required></td>
+                    </tr>
+                    <tr>
+                        <th><label>Organization</label></th>
+                        <td><input type="text" name="organization" class="regular-text" value="<?php echo esc_attr($organization); ?>" required></td>
+                    </tr>
+                    <tr>
+                        <th><label>Type</label></th>
+                        <td>
+                            <select name="type">
+                                <option value="One-time" <?php selected($type, 'One-time'); ?>>One-time</option>
+                                <option value="Recurring" <?php selected($type, 'Recurring'); ?>>Recurring</option>
+                                <option value="Seasonal" <?php selected($type, 'Seasonal'); ?>>Seasonal</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label>Email</label></th>
+                        <td><input type="email" name="email" class="regular-text" value="<?php echo esc_attr($email); ?>" required></td>
+                    </tr>
+                    <tr>
+                        <th><label>Description</label></th>
+                        <td><textarea name="description" rows="3" class="large-text"><?php echo esc_textarea($description); ?></textarea></td>
+                    </tr>
+                    <tr>
+                        <th><label>Location</label></th>
+                        <td><input type="text" name="location" class="regular-text" value="<?php echo esc_attr($location); ?>" required></td>
+                    </tr>
+                    <tr>
+                        <th><label>Hours</label></th>
+                        <td><input type="number" name="hours" class="small-text" value="<?php echo esc_attr($hours); ?>" required></td>
+                    </tr>
+                    <tr>
+                        <th><label>Skills</label></th>
+                        <td><input type="text" name="skills" class="large-text" value="<?php echo esc_attr($skills); ?>" placeholder="e.g. communication, coding"></td>
+                    </tr>
+                </table>
 
-    <div style="background:#fff; padding:20px; border:1px solid #ccc; margin-bottom: 20px;">
-      <h2>Add New Opportunity</h2>
-      <form method="post">
-        <table class="form-table">
-          <tr>
-            <th><label>Position</label></th>
-            <td><input type="text" name="position" class="regular-text" required></td>
-          </tr>
-          <tr>
-            <th><label>Organization</label></th>
-            <td><input type="text" name="organization" class="regular-text" required></td>
-          </tr>
-          <tr>
-            <th><label>Type</label></th>
-            <td>
-              <select name="type">
-                <option value="One-time">One-time</option>
-                <option value="Recurring">Recurring</option>
-                <option value="Seasonal">Seasonal</option>
-              </select>
-            </td>
-          </tr>
-          <tr>
-            <th><label>Email</label></th>
-            <td><input type="email" name="email" class="regular-text" required></td>
-          </tr>
-          <tr>
-            <th><label>Description</label></th>
-            <td><textarea name="description" rows="3" class="large-text"></textarea></td>
-          </tr>
-          <tr>
-            <th><label>Location</label></th>
-            <td><input type="text" name="location" class="regular-text" required></td>
-          </tr>
-          <tr>
-            <th><label>Hours</label></th>
-            <td><input type="number" name="hours" class="small-text" required></td>
-          </tr>
-          <tr>
-            <th><label>Skills</label></th>
-            <td><input type="text" name="skills" class="large-text" placeholder="e.g. communication, coding"></td>
-          </tr>
+                <p class="submit">
+                    <input type="submit" name="submit" value="<?php echo ($entry_id != 0) ? 'Update Opportunity' : 'Save Opportunity'; ?>" class="button button-primary">
+                    <?php if ($entry_id != 0) : ?>
+                        <a href="<?php echo admin_url('admin.php?page=volunteer_ops'); ?>" class="button">Cancel</a>
+                    <?php endif; ?>
+                </p>
+            </form>
+        </div>
+
+        <h2>Existing Opportunities</h2>
+        <table class="wp-list-table widefat fixed striped">
+            <thead>
+                <tr>
+                    <th>Position</th>
+                    <th>Organization</th>
+                    <th>Type</th>
+                    <th>Hours</th>
+                    <th>Location</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $results = $wpdb->get_results("SELECT * FROM $table_name");
+                
+                if ($results) {
+                    foreach ($results as $row) {
+                        $edit_link = admin_url('admin.php?page=volunteer_ops&action=edit&id=' . $row->id);
+                        $delete_link = admin_url('admin.php?page=volunteer_ops&action=delete&id=' . $row->id);
+                        echo "<tr>";
+                        echo "<td>" . esc_html($row->position) . "</td>";
+                        echo "<td>" . esc_html($row->organization) . "</td>";
+                        echo "<td>" . esc_html($row->type) . "</td>";
+                        echo "<td>" . esc_html($row->hours) . "</td>";
+                        echo "<td>" . esc_html($row->location) . "</td>";
+                        echo "<td>
+                                <a href='$edit_link' class='button button-small'>Edit</a> 
+                                <a href='$delete_link' class='button button-small button-link-delete' onclick=\"return confirm('Are you sure you want to delete this?')\">Delete</a>
+                              </td>";
+                        echo "</tr>";
+                    }
+                } else {
+                    echo "<tr><td colspan='6'>No volunteer opportunities found.</td></tr>";
+                }
+                ?>
+            </tbody>
         </table>
-
-        <p class="submit">
-          <input type="submit" name="submit" value="Save Opportunity" class="button button-primary">
-        </p>
-      </form>
     </div>
-
-    <h2>Existing Opportunities</h2>
-      <table class="wp-list-table widefat fixed striped">
-        <thead>
-          <tr>
-            <th>Position</th>
-            <th>Organization</th>
-            <th>Type</th>
-            <th>Hours</th>
-            <th>Location</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php
-            // Fetch all results [cite: 153]
-            $results = $wpdb->get_results("SELECT * FROM $table_name");
-                  
-            if ($results) {
-              foreach ($results as $row) {
-                $delete_link = admin_url('admin.php?page=volunteer_ops&action=delete&id=' . $row->id);
-                echo "<tr>";
-                echo "<td>" . esc_html($row->position) . "</td>";
-                echo "<td>" . esc_html($row->organization) . "</td>";
-                echo "<td>" . esc_html($row->type) . "</td>";
-                echo "<td>" . esc_html($row->hours) . "</td>";
-                echo "<td>" . esc_html($row->location) . "</td>";
-                echo "<td><a href='$delete_link' style='color:red;' onclick=\"return confirm('Are you sure you want to delete this?')\">Delete</a></td>";
-                echo "</tr>";
-              }
-            } else {
-              echo "<tr><td colspan='6'>No volunteer opportunities found.</td></tr>";
-            }
-          ?>
-        </tbody>
-      </table>
-  </div>
-  <?php
+    <?php
 }
  
 
